@@ -17,6 +17,8 @@
     --tg-section-bg: var(--tg-theme-section-bg-color, #ffffff);
     --tg-section-header: var(--tg-theme-section-header-text-color, #6d6d72);
     --tg-destructive: var(--tg-theme-destructive-text-color, #e53935);
+    --brand: #fab700;
+    --brand-text: #241a00;
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
   }
@@ -55,9 +57,9 @@
   }
   .brand-mark{
     width:34px; height:34px; border-radius:10px;
-    background: linear-gradient(135deg, var(--tg-btn), color-mix(in srgb, var(--tg-btn) 60%, #7b5cff));
+    background: var(--brand);
     display:flex; align-items:center; justify-content:center;
-    color: var(--tg-btn-text); font-weight:700; font-size:15px;
+    color: var(--brand-text); font-weight:700; font-size:15px;
   }
   .brand-name{ font-size:17px; font-weight:700; letter-spacing:0.2px; }
   .brand-sub{ font-size:12px; color: var(--tg-hint); margin-top:1px; }
@@ -101,7 +103,7 @@
     background: var(--tg-secondary-bg); color: var(--tg-text);
     border:none; cursor:pointer; transition: background .15s, color .15s;
   }
-  .chip.active{ background: var(--tg-btn); color: var(--tg-btn-text); }
+  .chip.active{ background: var(--brand); color: var(--brand-text); }
 
   /* ---------- Screens ---------- */
   .screen{ display:none; animation: fadein .18s ease; }
@@ -138,7 +140,7 @@
   .card-price{ font-size:14.5px; font-weight:700; }
   .add-btn{
     width:26px; height:26px; border-radius:50%; border:none;
-    background: var(--tg-btn); color: var(--tg-btn-text);
+    background: var(--brand); color: var(--brand-text);
     font-size:16px; line-height:1; cursor:pointer;
     display:flex; align-items:center; justify-content:center;
   }
@@ -164,7 +166,7 @@
   }
   .stepper button{
     width:28px; height:28px; border-radius:50%; border:none;
-    background: var(--tg-btn); color:var(--tg-btn-text);
+    background: var(--brand); color:var(--brand-text);
     font-size:17px; cursor:pointer;
   }
   .stepper span{ font-size:16px; font-weight:700; min-width:18px; text-align:center; }
@@ -210,7 +212,7 @@
   .back-btn{
     width:36px; height:36px; border:none; background:transparent;
     display:flex; align-items:center; justify-content:center;
-    color: var(--tg-link); cursor:pointer;
+    color: var(--brand); cursor:pointer;
   }
   .subheader-title{ font-size:16px; font-weight:600; padding:12px 0; }
 
@@ -226,7 +228,7 @@
   .bottom-bar.show{ display:block; }
   .main-btn{
     width:100%; border:none; border-radius:12px;
-    background: var(--tg-btn); color: var(--tg-btn-text);
+    background: var(--brand); color: var(--brand-text);
     font-size:16px; font-weight:600; padding:14px;
     display:flex; align-items:center; justify-content:center; gap:8px;
     cursor:pointer;
@@ -247,6 +249,31 @@
   .success-emoji{ font-size:56px; }
   .success-title{ font-size:20px; font-weight:700; margin-top:14px; }
   .success-text{ font-size:14.5px; color:var(--tg-hint); margin-top:8px; line-height:1.5; }
+
+  /* ---------- Profile ---------- */
+  .profile-hero{
+    display:flex; flex-direction:column; align-items:center;
+    padding: 28px 16px 20px; text-align:center;
+  }
+  .profile-avatar{
+    width:72px; height:72px; border-radius:50%;
+    background: var(--brand); color: var(--brand-text);
+    display:flex; align-items:center; justify-content:center;
+    font-size:28px; font-weight:700;
+    overflow:hidden;
+  }
+  .profile-avatar img{ width:100%; height:100%; object-fit:cover; }
+  .profile-name{ font-size:18px; font-weight:700; margin-top:12px; }
+  .role-badge{
+    display:inline-block; margin-top:6px;
+    font-size:12.5px; font-weight:600;
+    padding:4px 12px; border-radius:12px;
+    background: rgba(250,183,0,0.16); color: #8a6400;
+  }
+  .stat-row{
+    display:flex; align-items:center; gap:2px;
+  }
+  .stars{ color: var(--brand); font-size:14px; letter-spacing:1px; }
 </style>
 </head>
 <body>
@@ -264,10 +291,13 @@
             <div class="brand-sub">Одежда и аксессуары</div>
           </div>
         </div>
-        <button class="cart-btn" onclick="openCart()">
-          🛍️
-          <span class="cart-badge" id="cartBadge">0</span>
-        </button>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button class="cart-btn" onclick="openProfile()">👤</button>
+          <button class="cart-btn" onclick="openCart()">
+            🛍️
+            <span class="cart-badge" id="cartBadge">0</span>
+          </button>
+        </div>
       </div>
       <div class="search-row">
         <div class="search-box">
@@ -320,6 +350,39 @@
     </div>
   </div>
 
+  <!-- ===== PROFILE SCREEN ===== -->
+  <div class="screen" id="screen-profile">
+    <div class="subheader">
+      <button class="back-btn" onclick="goTo('catalog')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="subheader-title">Профиль</div>
+    </div>
+
+    <div class="profile-hero">
+      <div class="profile-avatar" id="profileAvatar">Г</div>
+      <div class="profile-name" id="profileName">Гость</div>
+      <div class="role-badge" id="roleBadge">Покупатель</div>
+    </div>
+
+    <div class="section-title">Роль</div>
+    <div class="chips" id="roleChips" style="padding:0 16px 16px;"></div>
+
+    <div class="section-title">Баланс</div>
+    <div class="summary">
+      <div class="summary-row total"><span>Доступно</span><span id="profileBalance">0 ₽</span></div>
+    </div>
+
+    <div class="section-title">Последний заказ</div>
+    <div class="summary" id="lastOrderBlock"></div>
+
+    <div class="section-title">Репутация</div>
+    <div class="summary">
+      <div class="summary-row"><span class="v-hint">Рейтинг</span><span class="stat-row"><span class="stars" id="profileStars">★★★★★</span>&nbsp;<span id="profileRating"></span></span></div>
+      <div class="summary-row"><span class="v-hint">Отзывы</span><span id="profileReviews">—</span></div>
+    </div>
+  </div>
+
   <!-- ===== SUCCESS SCREEN ===== -->
   <div class="screen" id="screen-success">
     <div class="subheader">
@@ -348,7 +411,7 @@
 const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : {
   ready(){}, expand(){}, close(){}, sendData(){},
   setHeaderColor(){}, setBackgroundColor(){},
-  MainButton: { setText(){}, show(){}, hide(){}, onClick(){}, offClick(){}, showProgress(){}, hideProgress(){} },
+  MainButton: { setText(){}, setParams(){}, show(){}, hide(){}, onClick(){}, offClick(){}, showProgress(){}, hideProgress(){} },
   BackButton: { show(){}, hide(){}, onClick(){}, offClick(){} },
   HapticFeedback: { impactOccurred(){}, notificationOccurred(){} },
   themeParams: {}, colorScheme: 'light',
@@ -357,6 +420,7 @@ const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : 
 tg.ready();
 tg.expand();
 try{ tg.setHeaderColor('secondary_bg_color'); }catch(e){}
+try{ tg.MainButton.setParams({ color:'#fab700', text_color:'#241a00' }); }catch(e){}
 
 /* Apply theme params as CSS vars so it matches the user's Telegram theme */
 function applyTheme(){
@@ -391,6 +455,17 @@ const PRODUCTS = [
 
 const CATEGORIES = ['Все', ...Array.from(new Set(PRODUCTS.map(p=>p.cat)))];
 
+/* Roles a user of the shop can have. In production this should come from
+   your bot's backend/database (tied to the Telegram user id), not be
+   editable on the client — the chip switcher below is only a demo of how
+   each role looks. */
+const ROLES = {
+  buyer: 'Покупатель',
+  seller: 'Продавец',
+  owner: 'Владелец',
+  admin: 'Администратор'
+};
+
 /* =========================================================
    State
    ========================================================= */
@@ -398,6 +473,16 @@ let cart = {};          // { productId: qty }
 let activeCategory = 'Все';
 let currentProductId = null;
 let currentScreen = 'catalog';
+
+// Demo profile data — replace with real data fetched from your backend,
+// keyed by tg.initDataUnsafe.user.id
+let userProfile = {
+  role: 'buyer',
+  balance: 12500,
+  reputation: 4.8,
+  reputationCount: 132,
+  lastOrder: null   // filled in after checkout, or fetch the real last order from your backend
+};
 
 /* =========================================================
    Render: catalog
@@ -553,6 +638,56 @@ function renderCart(){
 }
 
 /* =========================================================
+   Profile
+   ========================================================= */
+function renderProfile(){
+  const u = tg.initDataUnsafe && tg.initDataUnsafe.user;
+  const name = u ? [u.first_name, u.last_name].filter(Boolean).join(' ') : 'Гость';
+
+  document.getElementById('profileName').textContent = name || 'Гость';
+
+  const avatarEl = document.getElementById('profileAvatar');
+  if(u && u.photo_url){
+    avatarEl.innerHTML = `<img src="${u.photo_url}" alt="${name}">`;
+  } else {
+    avatarEl.textContent = (name || 'Г').charAt(0).toUpperCase();
+  }
+
+  document.getElementById('roleBadge').textContent = ROLES[userProfile.role];
+  document.getElementById('profileBalance').textContent = fmt(userProfile.balance);
+  document.getElementById('profileRating').textContent = userProfile.reputation.toFixed(1);
+  document.getElementById('profileReviews').textContent = `${userProfile.reputationCount} отзывов`;
+
+  const filledStars = Math.round(userProfile.reputation);
+  document.getElementById('profileStars').textContent = '★★★★★'.slice(0, filledStars).padEnd(5, '☆');
+
+  const roleChips = document.getElementById('roleChips');
+  roleChips.innerHTML = Object.entries(ROLES).map(([key, label]) =>
+    `<button class="chip ${key===userProfile.role?'active':''}" onclick="setRole('${key}')">${label}</button>`
+  ).join('');
+
+  const lastBlock = document.getElementById('lastOrderBlock');
+  if(userProfile.lastOrder){
+    const o = userProfile.lastOrder;
+    lastBlock.innerHTML = `
+      <div class="summary-row"><span class="v-hint">Дата</span><span>${o.date}</span></div>
+      <div class="summary-row"><span class="v-hint">Товаров</span><span>${o.count}</span></div>
+      <div class="summary-row total"><span>Сумма</span><span>${fmt(o.total)}</span></div>
+    `;
+  } else {
+    lastBlock.innerHTML = `<div class="summary-row"><span class="v-hint">Пока нет заказов</span></div>`;
+  }
+}
+
+function setRole(key){
+  userProfile.role = key;
+  renderProfile();
+  tg.HapticFeedback && tg.HapticFeedback.impactOccurred('light');
+}
+
+function openProfile(){ goTo('profile'); }
+
+/* =========================================================
    Navigation + MainButton sync
    ========================================================= */
 function goTo(screen){
@@ -562,6 +697,7 @@ function goTo(screen){
   window.scrollTo(0,0);
 
   if(screen==='cart') renderCart();
+  if(screen==='profile') renderProfile();
 
   syncMainButton();
   syncBackButton();
@@ -579,6 +715,7 @@ function syncBackButton(){
 tg.BackButton.onClick && tg.BackButton.onClick(()=>{
   if(currentScreen==='product') goTo('catalog');
   else if(currentScreen==='cart') goTo('catalog');
+  else if(currentScreen==='profile') goTo('catalog');
   else if(currentScreen==='success') goTo('catalog');
 });
 
@@ -629,6 +766,13 @@ function submitOrder(){
   };
   try{ tg.sendData(JSON.stringify(order)); }catch(e){}
   tg.HapticFeedback && tg.HapticFeedback.notificationOccurred('success');
+
+  userProfile.lastOrder = {
+    date: new Date().toLocaleDateString('ru-RU'),
+    count: cartCount(),
+    total: cartTotal()
+  };
+
   cart = {};
   updateCartBadge();
   goTo('success');
