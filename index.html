@@ -331,6 +331,21 @@
       </div>
       <div class="pd-desc-title" style="margin-top:20px;">Описание</div>
       <div class="pd-desc" id="pdDesc"></div>
+
+      <div class="pd-desc-title" style="margin-top:22px;">Продавец</div>
+      <div class="pd-desc" id="pdSeller"></div>
+
+      <div class="pd-desc-title" style="margin-top:22px;">Отзывы</div>
+      <div id="pdReviews"></div>
+
+      <div class="pd-desc-title" style="margin-top:18px;">Оставить отзыв</div>
+      <div class="stepper" style="width:100%; justify-content:space-between;">
+        <div id="pdReviewStars" style="font-size:22px; cursor:pointer; letter-spacing:3px;">☆☆☆☆☆</div>
+      </div>
+      <textarea id="pdReviewText" placeholder="Ваш отзыв о товаре (необязательно)"
+        style="width:100%; margin-top:10px; padding:10px 12px; border-radius:10px; border:1px solid rgba(0,0,0,0.1); font-size:14px; font-family:inherit; resize:vertical; min-height:60px; background:var(--tg-secondary-bg); color:var(--tg-text);"></textarea>
+      <button class="chip" style="margin-top:10px;" onclick="submitReview()">Отправить отзыв</button>
+      <div class="hint" style="font-size:12px; color:var(--tg-hint); margin-top:6px;">Доступно только для купленных товаров. Отзыв публикуется после проверки владельцем магазина.</div>
     </div>
   </div>
 
@@ -365,22 +380,27 @@
       <div class="role-badge" id="roleBadge">Покупатель</div>
     </div>
 
-    <div class="section-title">Роль</div>
-    <div class="chips" id="roleChips" style="padding:0 16px 16px;"></div>
+    <div id="adminPanelLink"></div>
 
     <div class="section-title">Баланс</div>
     <div class="summary">
       <div class="summary-row total"><span>Доступно</span><span id="profileBalance">0 ₽</span></div>
     </div>
+    <div style="padding:12px 16px;">
+      <button class="chip" style="width:100%;" onclick="requestTopup()">Пополнить баланс</button>
+    </div>
+
+    <div class="section-title" id="reputationTitle" style="display:none;">Репутация продавца</div>
+    <div class="summary" id="reputationBlock" style="display:none;">
+      <div class="summary-row"><span class="v-hint">Рейтинг</span><span class="stat-row"><span class="stars" id="profileStars">★★★★★</span>&nbsp;<span id="profileRating"></span></span></div>
+      <div class="summary-row"><span class="v-hint">Отзывы</span><span id="profileReviews">—</span></div>
+    </div>
 
     <div class="section-title">Последний заказ</div>
     <div class="summary" id="lastOrderBlock"></div>
 
-    <div class="section-title">Репутация</div>
-    <div class="summary">
-      <div class="summary-row"><span class="v-hint">Рейтинг</span><span class="stat-row"><span class="stars" id="profileStars">★★★★★</span>&nbsp;<span id="profileRating"></span></span></div>
-      <div class="summary-row"><span class="v-hint">Отзывы</span><span id="profileReviews">—</span></div>
-    </div>
+    <div class="section-title">История операций с балансом</div>
+    <div class="summary" id="historyBlock"></div>
   </div>
 
   <!-- ===== SUCCESS SCREEN ===== -->
@@ -404,12 +424,13 @@
 
 <div class="toast" id="toast"></div>
 
+
 <script>
 /* =========================================================
    Telegram WebApp init (with safe fallback for browser preview)
    ========================================================= */
 const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : {
-  ready(){}, expand(){}, close(){}, sendData(){},
+  ready(){}, expand(){}, close(){}, sendData(){}, initData:'',
   setHeaderColor(){}, setBackgroundColor(){},
   MainButton: { setText(){}, setParams(){}, show(){}, hide(){}, onClick(){}, offClick(){}, showProgress(){}, hideProgress(){} },
   BackButton: { show(){}, hide(){}, onClick(){}, offClick(){} },
@@ -422,7 +443,6 @@ tg.expand();
 try{ tg.setHeaderColor('secondary_bg_color'); }catch(e){}
 try{ tg.MainButton.setParams({ color:'#fab700', text_color:'#241a00' }); }catch(e){}
 
-/* Apply theme params as CSS vars so it matches the user's Telegram theme */
 function applyTheme(){
   const p = tg.themeParams || {};
   const root = document.documentElement.style;
@@ -440,49 +460,62 @@ applyTheme();
 tg.onEvent && tg.onEvent('themeChanged', applyTheme);
 
 /* =========================================================
-   Product data — замените на свои товары
+   API helper — все запросы подписаны initData Telegram,
+   бэкенд (app/api/routes.py) проверяет подпись сам.
    ========================================================= */
-const PRODUCTS = [
-  { id:1, name:'Оверсайз худи', tag:'Худи · унисекс', price:3990, cat:'Одежда', img:'https://picsum.photos/seed/nova1/500/500', desc:'Плотный хлопковый флис 340 г/м², прямой крой, регулируемый капюшон. Доступны размеры S–XL.' },
-  { id:2, name:'Кроссовки Runner', tag:'Обувь', price:6490, cat:'Обувь', img:'https://picsum.photos/seed/nova2/500/500', desc:'Лёгкая амортизирующая подошва, дышащая сетка верха. Подходят для города и пробежек.' },
-  { id:3, name:'Кепка классик', tag:'Аксессуары', price:1290, cat:'Аксессуары', img:'https://picsum.photos/seed/nova3/500/500', desc:'Плотная бейсболка с вышитым логотипом, регулируемый ремешок сзади.' },
-  { id:4, name:'Джинсы прямые', tag:'Джинсы · унисекс', price:4590, cat:'Одежда', img:'https://picsum.photos/seed/nova4/500/500', desc:'Плотный деним 12 oz, прямой силуэт, средняя посадка.' },
-  { id:5, name:'Рюкзак City', tag:'Аксессуары', price:3290, cat:'Аксессуары', img:'https://picsum.photos/seed/nova5/500/500', desc:'Водоотталкивающая ткань, отделение под ноутбук 15", объём 18 л.' },
-  { id:6, name:'Футболка Basic', tag:'Футболки · унисекс', price:1590, cat:'Одежда', img:'https://picsum.photos/seed/nova6/500/500', desc:'100% хлопок плотностью 180 г/м², свободный крой, усиленные швы.' },
-  { id:7, name:'Носки х3', tag:'Аксессуары', price:790, cat:'Аксессуары', img:'https://picsum.photos/seed/nova7/500/500', desc:'Набор из трёх пар, хлопок с эластаном, усиленная пятка.' },
-  { id:8, name:'Сникеры Low', tag:'Обувь', price:5990, cat:'Обувь', img:'https://picsum.photos/seed/nova8/500/500', desc:'Минималистичный дизайн, кожзам премиум-класса, резиновая подошва.' },
-];
+const ROLES = { buyer:'Покупатель', seller:'Продавец', owner:'Владелец', admin:'Администратор' };
 
-const CATEGORIES = ['Все', ...Array.from(new Set(PRODUCTS.map(p=>p.cat)))];
-
-/* Roles a user of the shop can have. In production this should come from
-   your bot's backend/database (tied to the Telegram user id), not be
-   editable on the client — the chip switcher below is only a demo of how
-   each role looks. */
-const ROLES = {
-  buyer: 'Покупатель',
-  seller: 'Продавец',
-  owner: 'Владелец',
-  admin: 'Администратор'
-};
+async function api(path, options = {}){
+  const opts = Object.assign({ headers: {} }, options);
+  opts.headers = Object.assign({
+    'Content-Type': 'application/json',
+    'X-Telegram-Init-Data': tg.initData || ''
+  }, opts.headers);
+  const res = await fetch(path, opts);
+  if(!res.ok){
+    let detail = 'Ошибка запроса';
+    try{ detail = (await res.json()).detail || detail; }catch(e){}
+    if(res.status===401) detail = 'Откройте магазин через кнопку в Telegram-боте';
+    throw new Error(detail);
+  }
+  return res.status===204 ? null : res.json();
+}
 
 /* =========================================================
    State
    ========================================================= */
-let cart = {};          // { productId: qty }
-let activeCategory = 'Все';
+let PRODUCTS = [];
+let CATEGORIES = [{id:null, name:'Все'}];
+let cart = {};
+let activeCategoryId = null;
 let currentProductId = null;
 let currentScreen = 'catalog';
+let profile = { role:'buyer', balance:0, reputation:0, reputation_count:0 };
 
-// Demo profile data — replace with real data fetched from your backend,
-// keyed by tg.initDataUnsafe.user.id
-let userProfile = {
-  role: 'buyer',
-  balance: 12500,
-  reputation: 4.8,
-  reputationCount: 132,
-  lastOrder: null   // filled in after checkout, or fetch the real last order from your backend
-};
+/* =========================================================
+   Load data from backend
+   ========================================================= */
+async function loadCatalog(){
+  try{
+    const [cats, products] = await Promise.all([api('/api/categories'), api('/api/products')]);
+    CATEGORIES = [{id:null, name:'Все'}, ...cats];
+    PRODUCTS = products;
+  }catch(e){
+    bumpToast(e.message);
+  }
+  renderChips();
+  renderCatalog();
+}
+
+async function loadProfile(){
+  try{
+    profile = await api('/api/profile/me');
+  }catch(e){
+    bumpToast(e.message);
+    return;
+  }
+  renderProfile();
+}
 
 /* =========================================================
    Render: catalog
@@ -490,12 +523,12 @@ let userProfile = {
 function renderChips(){
   const el = document.getElementById('chips');
   el.innerHTML = CATEGORIES.map(c =>
-    `<button class="chip ${c===activeCategory?'active':''}" onclick="setCategory('${c}')">${c}</button>`
+    `<button class="chip ${c.id===activeCategoryId?'active':''}" onclick="setCategory(${c.id})">${c.name}</button>`
   ).join('');
 }
 
-function setCategory(c){
-  activeCategory = c;
+function setCategory(id){
+  activeCategoryId = id;
   renderChips();
   renderCatalog();
   tg.HapticFeedback && tg.HapticFeedback.impactOccurred('light');
@@ -503,35 +536,35 @@ function setCategory(c){
 
 function renderCatalog(){
   const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
-  let items = PRODUCTS.filter(p => activeCategory==='Все' || p.cat===activeCategory);
+  let items = PRODUCTS.filter(p => activeCategoryId===null || p.category_id===activeCategoryId);
   if(q) items = items.filter(p => p.name.toLowerCase().includes(q));
 
-  document.getElementById('gridTitle').textContent = activeCategory==='Все' ? 'Все товары' : activeCategory;
+  const activeCat = CATEGORIES.find(c=>c.id===activeCategoryId);
+  document.getElementById('gridTitle').textContent = activeCat ? activeCat.name : 'Все товары';
 
   const grid = document.getElementById('grid');
+  const existingEmpty = document.getElementById('emptyState');
+  if(existingEmpty) existingEmpty.remove();
+
   if(items.length===0){
     grid.style.display='none';
     grid.parentElement.querySelector('.section-title').style.display='none';
-    if(!document.getElementById('emptyState')){
-      const empty = document.createElement('div');
-      empty.id='emptyState';
-      empty.className='empty';
-      empty.innerHTML = `<div class="empty-emoji">🔍</div>Ничего не найдено`;
-      grid.parentElement.appendChild(empty);
-    }
+    const empty = document.createElement('div');
+    empty.id='emptyState';
+    empty.className='empty';
+    empty.innerHTML = `<div class="empty-emoji">🔍</div>Ничего не найдено`;
+    grid.parentElement.appendChild(empty);
     return;
   }
-  const existingEmpty = document.getElementById('emptyState');
-  if(existingEmpty) existingEmpty.remove();
   grid.style.display='grid';
   grid.parentElement.querySelector('.section-title').style.display='block';
 
   grid.innerHTML = items.map(p => `
     <div class="card" onclick="openProduct(${p.id})">
-      <img class="card-img" src="${p.img}" alt="${p.name}">
+      <img class="card-img" src="${p.image_url || 'https://picsum.photos/seed/nova' + p.id + '/500/500'}" alt="${p.name}">
       <div class="card-body">
         <div class="card-name">${p.name}</div>
-        <div class="card-tag">${p.tag}</div>
+        <div class="card-tag">${p.category_name || ''}</div>
         <div class="card-row">
           <div class="card-price">${fmt(p.price)}</div>
           <button class="add-btn" onclick="event.stopPropagation(); addToCart(${p.id}, 1); bumpToast('Добавлено в корзину');">+</button>
@@ -544,16 +577,81 @@ function renderCatalog(){
 /* =========================================================
    Render: product detail
    ========================================================= */
-function openProduct(id){
+let selectedReviewRating = 0;
+
+async function openProduct(id){
   currentProductId = id;
-  const p = PRODUCTS.find(x=>x.id===id);
-  document.getElementById('pdImg').src = p.img;
+  let p;
+  try{
+    p = await api('/api/products/' + id);
+  }catch(e){
+    bumpToast(e.message);
+    return;
+  }
+  document.getElementById('pdImg').src = p.image_url || ('https://picsum.photos/seed/nova' + p.id + '/500/500');
   document.getElementById('pdName').textContent = p.name;
-  document.getElementById('pdTag').textContent = p.tag;
+  document.getElementById('pdTag').textContent = p.category_name || '';
   document.getElementById('pdPrice').textContent = fmt(p.price);
-  document.getElementById('pdDesc').textContent = p.desc;
+  document.getElementById('pdDesc').textContent = p.description || 'Без описания';
   document.getElementById('pdQty').textContent = '1';
+  document.getElementById('pdSeller').textContent =
+    `${p.seller_name || 'Продавец'} · ⭐ ${p.seller_reputation ?? 0} (${p.seller_reviews_count ?? 0} отзывов)`;
+
+  selectedReviewRating = 0;
+  document.getElementById('pdReviewStars').textContent = '☆☆☆☆☆';
+  document.getElementById('pdReviewText').value = '';
+
+  const starsEl = document.getElementById('pdReviewStars');
+  starsEl.onclick = (ev)=>{
+    const rect = starsEl.getBoundingClientRect();
+    const ratio = (ev.clientX - rect.left) / rect.width;
+    selectedReviewRating = Math.max(1, Math.min(5, Math.ceil(ratio*5)));
+    starsEl.textContent = '★'.repeat(selectedReviewRating) + '☆'.repeat(5-selectedReviewRating);
+  };
+
+  await loadReviews(id);
   goTo('product');
+}
+
+async function loadReviews(productId){
+  const box = document.getElementById('pdReviews');
+  box.innerHTML = '<div class="v-hint" style="font-size:13px;">Загрузка…</div>';
+  try{
+    const reviews = await api('/api/reviews/product/' + productId);
+    if(reviews.length===0){
+      box.innerHTML = '<div class="v-hint" style="font-size:13px;">Пока нет отзывов</div>';
+      return;
+    }
+    box.innerHTML = reviews.map(r => `
+      <div style="padding:10px 0; border-bottom:1px solid rgba(0,0,0,0.06);">
+        <div class="stars">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
+        <div style="font-size:13.5px; margin-top:3px;">${r.text || ''}</div>
+        <div class="v-hint" style="font-size:11.5px; margin-top:3px;">${r.author} · ${r.date}</div>
+      </div>
+    `).join('');
+  }catch(e){
+    box.innerHTML = `<div class="v-hint" style="font-size:13px;">${e.message}</div>`;
+  }
+}
+
+async function submitReview(){
+  if(selectedReviewRating===0){
+    bumpToast('Выберите оценку');
+    return;
+  }
+  try{
+    const res = await api('/api/reviews', {
+      method:'POST',
+      body: JSON.stringify({
+        product_id: currentProductId,
+        rating: selectedReviewRating,
+        text: document.getElementById('pdReviewText').value.trim()
+      })
+    });
+    bumpToast(res.message || 'Отзыв отправлен');
+  }catch(e){
+    bumpToast(e.message);
+  }
 }
 
 function changeQty(delta){
@@ -562,10 +660,11 @@ function changeQty(delta){
   if(v<1) v=1;
   el.textContent = v;
   tg.HapticFeedback && tg.HapticFeedback.impactOccurred('light');
+  syncMainButton();
 }
 
 /* =========================================================
-   Cart logic
+   Cart logic (хранится локально в мини-аппе до оформления заказа)
    ========================================================= */
 function addToCart(id, qty){
   cart[id] = (cart[id]||0) + qty;
@@ -614,12 +713,13 @@ function renderCart(){
   document.getElementById('cartSummary').style.display='block';
   list.innerHTML = entries.map(([id,qty])=>{
     const p = PRODUCTS.find(x=>x.id==id);
+    if(!p) return '';
     return `
     <div class="cart-item">
-      <img src="${p.img}" alt="${p.name}">
+      <img src="${p.image_url || 'https://picsum.photos/seed/nova'+p.id+'/500/500'}" alt="${p.name}">
       <div class="ci-info">
         <div class="ci-name">${p.name}</div>
-        <div class="ci-tag">${p.tag}</div>
+        <div class="ci-tag">${p.category_name || ''}</div>
         <div class="ci-row">
           <div class="ci-price">${fmt(p.price*qty)}</div>
           <div class="ci-step">
@@ -642,9 +742,9 @@ function renderCart(){
    ========================================================= */
 function renderProfile(){
   const u = tg.initDataUnsafe && tg.initDataUnsafe.user;
-  const name = u ? [u.first_name, u.last_name].filter(Boolean).join(' ') : 'Гость';
+  const name = (u ? [u.first_name, u.last_name].filter(Boolean).join(' ') : '') || profile.full_name || 'Гость';
 
-  document.getElementById('profileName').textContent = name || 'Гость';
+  document.getElementById('profileName').textContent = name;
 
   const avatarEl = document.getElementById('profileAvatar');
   if(u && u.photo_url){
@@ -653,36 +753,87 @@ function renderProfile(){
     avatarEl.textContent = (name || 'Г').charAt(0).toUpperCase();
   }
 
-  document.getElementById('roleBadge').textContent = ROLES[userProfile.role];
-  document.getElementById('profileBalance').textContent = fmt(userProfile.balance);
-  document.getElementById('profileRating').textContent = userProfile.reputation.toFixed(1);
-  document.getElementById('profileReviews').textContent = `${userProfile.reputationCount} отзывов`;
+  document.getElementById('roleBadge').textContent = profile.role_label || ROLES[profile.role] || 'Покупатель';
+  document.getElementById('profileBalance').textContent = fmt(profile.balance || 0);
 
-  const filledStars = Math.round(userProfile.reputation);
-  document.getElementById('profileStars').textContent = '★★★★★'.slice(0, filledStars).padEnd(5, '☆');
-
-  const roleChips = document.getElementById('roleChips');
-  roleChips.innerHTML = Object.entries(ROLES).map(([key, label]) =>
-    `<button class="chip ${key===userProfile.role?'active':''}" onclick="setRole('${key}')">${label}</button>`
-  ).join('');
-
-  const lastBlock = document.getElementById('lastOrderBlock');
-  if(userProfile.lastOrder){
-    const o = userProfile.lastOrder;
-    lastBlock.innerHTML = `
-      <div class="summary-row"><span class="v-hint">Дата</span><span>${o.date}</span></div>
-      <div class="summary-row"><span class="v-hint">Товаров</span><span>${o.count}</span></div>
-      <div class="summary-row total"><span>Сумма</span><span>${fmt(o.total)}</span></div>
-    `;
+  const linkBox = document.getElementById('adminPanelLink');
+  if(['owner','admin','seller'].includes(profile.role)){
+    linkBox.innerHTML = `<div style="padding:0 16px 12px;">
+      <a href="/admin/" target="_blank" style="display:block; text-align:center; padding:11px; border-radius:11px; background:var(--tg-secondary-bg); color:var(--tg-link); font-size:13.5px; font-weight:600;">
+        Открыть панель управления
+      </a></div>`;
   } else {
-    lastBlock.innerHTML = `<div class="summary-row"><span class="v-hint">Пока нет заказов</span></div>`;
+    linkBox.innerHTML = '';
+  }
+
+  if(profile.role==='seller' && (profile.reputation_count||0) > 0){
+    document.getElementById('reputationTitle').style.display='block';
+    document.getElementById('reputationBlock').style.display='block';
+    document.getElementById('profileRating').textContent = (profile.reputation||0).toFixed(1);
+    document.getElementById('profileReviews').textContent = `${profile.reputation_count||0} отзывов`;
+    const filledStars = Math.round(profile.reputation||0);
+    document.getElementById('profileStars').textContent = '★★★★★'.slice(0, filledStars).padEnd(5, '☆');
+  } else {
+    document.getElementById('reputationTitle').style.display='none';
+    document.getElementById('reputationBlock').style.display='none';
+  }
+
+  loadOrdersAndHistory();
+}
+
+async function loadOrdersAndHistory(){
+  const lastBlock = document.getElementById('lastOrderBlock');
+  const historyBlock = document.getElementById('historyBlock');
+  try{
+    const orders = await api('/api/orders/my');
+    if(orders.length>0){
+      const o = orders[0];
+      lastBlock.innerHTML = `
+        <div class="summary-row"><span class="v-hint">Дата</span><span>${o.date}</span></div>
+        <div class="summary-row"><span class="v-hint">Товаров</span><span>${o.items.length}</span></div>
+        <div class="summary-row total"><span>Сумма</span><span>${fmt(o.total)}</span></div>
+      `;
+    } else {
+      lastBlock.innerHTML = `<div class="summary-row"><span class="v-hint">Пока нет заказов</span></div>`;
+    }
+  }catch(e){
+    lastBlock.innerHTML = `<div class="summary-row"><span class="v-hint">${e.message}</span></div>`;
+  }
+
+  try{
+    const txs = await api('/api/profile/history');
+    const labels = {topup:'Пополнение', purchase:'Покупка', refund:'Возврат', adjustment:'Корректировка'};
+    const statusLabels = {pending:'ожидает подтверждения', approved:'подтверждено', rejected:'отклонено'};
+    if(txs.length===0){
+      historyBlock.innerHTML = `<div class="summary-row"><span class="v-hint">Операций пока нет</span></div>`;
+    } else {
+      historyBlock.innerHTML = txs.slice(0,10).map(t => `
+        <div class="summary-row">
+          <span class="v-hint">${labels[t.type]||t.type} · ${t.date}${t.status!=='approved' ? ' · '+statusLabels[t.status] : ''}</span>
+          <span>${t.amount>0?'+':''}${fmt(t.amount)}</span>
+        </div>
+      `).join('');
+    }
+  }catch(e){
+    historyBlock.innerHTML = `<div class="summary-row"><span class="v-hint">${e.message}</span></div>`;
   }
 }
 
-function setRole(key){
-  userProfile.role = key;
-  renderProfile();
-  tg.HapticFeedback && tg.HapticFeedback.impactOccurred('light');
+async function requestTopup(){
+  const amountStr = prompt('На какую сумму пополнить баланс, ₽?');
+  if(!amountStr) return;
+  const amount = parseInt(amountStr, 10);
+  if(!amount || amount<=0){ bumpToast('Некорректная сумма'); return; }
+  try{
+    await api('/api/profile/topup-request', {
+      method:'POST',
+      body: JSON.stringify({ amount, comment: 'Заявка из мини-аппа' })
+    });
+    bumpToast('Заявка отправлена, ожидайте подтверждения');
+    await loadOrdersAndHistory();
+  }catch(e){
+    bumpToast(e.message);
+  }
 }
 
 function openProfile(){ goTo('profile'); }
@@ -697,7 +848,7 @@ function goTo(screen){
   window.scrollTo(0,0);
 
   if(screen==='cart') renderCart();
-  if(screen==='profile') renderProfile();
+  if(screen==='profile') loadProfile();
 
   syncMainButton();
   syncBackButton();
@@ -726,7 +877,7 @@ function syncMainButton(){
   if(currentScreen==='product'){
     const qty = parseInt(document.getElementById('pdQty').textContent,10);
     const p = PRODUCTS.find(x=>x.id===currentProductId);
-    const label = `Добавить · ${fmt(p.price*qty)}`;
+    const label = p ? `Добавить · ${fmt(p.price*qty)}` : 'Добавить';
     btn.textContent = label;
     bar.classList.add('show');
     tg.MainButton.setText(label);
@@ -756,27 +907,18 @@ function handleMainButton(){
 }
 tg.MainButton.onClick && tg.MainButton.onClick(handleMainButton);
 
-function submitOrder(){
-  const order = {
-    items: Object.entries(cart).map(([id,qty])=>{
-      const p = PRODUCTS.find(x=>x.id==id);
-      return { id:p.id, name:p.name, price:p.price, qty };
-    }),
-    total: cartTotal()
-  };
-  try{ tg.sendData(JSON.stringify(order)); }catch(e){}
-  tg.HapticFeedback && tg.HapticFeedback.notificationOccurred('success');
-
-  userProfile.lastOrder = {
-    date: new Date().toLocaleDateString('ru-RU'),
-    count: cartCount(),
-    total: cartTotal()
-  };
-
-  cart = {};
-  updateCartBadge();
-  goTo('success');
-  setTimeout(()=>{ try{ tg.close(); }catch(e){} }, 1800);
+async function submitOrder(){
+  try{
+    const res = await api('/api/orders', { method:'POST', body: JSON.stringify({ cart }) });
+    tg.HapticFeedback && tg.HapticFeedback.notificationOccurred('success');
+    cart = {};
+    updateCartBadge();
+    goTo('success');
+    setTimeout(()=>{ try{ tg.close(); }catch(e){} }, 1800);
+  }catch(e){
+    bumpToast(e.message);
+    tg.HapticFeedback && tg.HapticFeedback.notificationOccurred('error');
+  }
 }
 
 /* =========================================================
@@ -792,16 +934,16 @@ function bumpToast(msg){
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>t.classList.remove('show'), 1500);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
 }
 
 /* =========================================================
    Init
    ========================================================= */
-renderChips();
-renderCatalog();
-updateCartBadge();
+document.getElementById('searchInput').addEventListener('input', renderCatalog);
+loadCatalog();
 syncBackButton();
 </script>
 </body>
 </html>
+
